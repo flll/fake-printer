@@ -1,20 +1,24 @@
 # fake-printer
 
-LAN 上に仮想 IPP / AirPrint プリンターを立て、印刷ジョブをローカルに保存する Windows 向けツールです。
+**Virtual IPP / AirPrint printer for Windows** — capture print jobs from LAN clients into a local **agent-friendly inbox** (PDF with text layer, or PNG fallback).
 
-- **エンジン**: [paperlessprinter](https://github.com/paperlesspaper/paperlessprinter)（IPP サーバー、セットアップ時に clone）
-- **UI**: rich の枠線ダッシュボード（窓を閉じると停止）
-- **成果物**: `inbox/` に PDF（テキスト層あり）または PNG フォールバック
+Keywords: virtual printer, IPP, AirPrint, mDNS, print capture, agent inbox, Windows.
 
-## 要件
+- **Engine**: [paperlessprinter](https://github.com/paperlesspaper/paperlessprinter) (cloned at setup, AGPL-3.0)
+- **UI**: rich bordered dashboard (close the window to stop)
+- **Output**: `inbox/` — PDF when text is extractable, otherwise per-page PNG
 
-- Windows 10 以降
+For AI coding agents, see [AGENTS.md](AGENTS.md). Security model: [SECURITY.md](SECURITY.md).
+
+## Requirements
+
+- Windows 10 or later
 - [PowerShell 7+](https://github.com/PowerShell/PowerShell)
-- Python 3.12+（`setup.ps1` が winget で導入を試みます）
+- Python 3.12+ (`setup.ps1` tries winget if missing)
 - Git
-- Ghostscript（PostScript ジョブのみ・任意）
+- Ghostscript (optional — PostScript jobs only)
 
-## クイックスタート
+## Quick start
 
 ```powershell
 git clone https://github.com/flll/fake-printer.git
@@ -23,72 +27,72 @@ pwsh scripts/setup.ps1
 .\start-fake-printer.bat
 ```
 
-`start-fake-printer.bat` のウィンドウを閉じるとサーバーと mDNS が停止します。
+Closing the `start-fake-printer.bat` window stops the server and mDNS advertiser.
 
-## クライアント接続
+## Connect clients
 
-| 端末 | 手順 |
-|------|------|
-| iPhone / iPad / Mac | 同一 LAN で **Fake Printer** が AirPrint 一覧に表示 |
-| Windows | 設定 → プリンター → 手動追加 → IPP → `ipp://<ホストIP>:8631/ipp/print` |
+| Client | How |
+|--------|-----|
+| iPhone / iPad / Mac | Same LAN — **Fake Printer** appears in the AirPrint list |
+| Windows | Settings → Printers → Add manually → IPP → `ipp://<host-ip>:8631/ipp/print` |
 
-ホスト IP はダッシュボード左パネルに表示されます。
+The host IP is shown in the dashboard left panel.
 
-## エージェント連携
+## Agent integration
 
-ジョブ完了後、`postprocess.py` が自動で `inbox/` にコピーします。
+After each job, `postprocess.py` copies artifacts into `inbox/`:
 
-| 条件 | inbox のファイル |
-|------|------------------|
-| テキスト付き PDF | `<YYYYMMDD_HHMM>_<jobname>.pdf` |
-| 画像のみ / フォールバック | `<YYYYMMDD_HHMM>_<jobname>_p001.png` … |
+| Condition | Inbox file |
+|-----------|------------|
+| PDF with text layer | `<YYYYMMDD_HHMM>_<jobname>.pdf` |
+| Image-only / fallback | `<YYYYMMDD_HHMM>_<jobname>_p001.png` … |
 
-生ログは `logs/server.log` と `logs/mdns.log` です。
+Raw logs: `logs/server.log`, `logs/mdns.log`.
 
-## 運用コマンド
+## Operations
 
 ```powershell
-pwsh scripts/doctor.ps1          # 診断
-pwsh scripts/start.ps1           # bat を別窓で起動
-pwsh scripts/stop.ps1            # 残骸プロセスを停止
-pwsh scripts/setup.ps1 -Force    # paperlessprinter を再 clone
+pwsh scripts/doctor.ps1          # health check
+pwsh scripts/start.ps1           # launch bat in a new window
+pwsh scripts/stop.ps1            # stop stray processes
+pwsh scripts/setup.ps1 -Force    # re-clone paperlessprinter
 ```
 
-### ファイアウォール
+### Firewall
 
-管理者 PowerShell で:
+Run as Administrator:
 
 ```powershell
 pwsh scripts/open-firewall.ps1
 ```
 
-TCP **8631**（IPP）と UDP **5353**（mDNS）を許可します。
+Allows TCP **8631** (IPP) and UDP **5353** (mDNS).
 
-### カスタムインストール先
+### Custom install root
 
-デフォルトは clone したリポジトリのルートです。別フォルダに置きたい場合:
+Default is the cloned repository root. For another path:
 
 ```powershell
 pwsh scripts/setup.ps1 -InstallRoot 'D:\my-fake-printer'
 ```
 
-## リポジトリ構成
+## Repository layout
 
 ```
 fake-printer/
-  start-fake-printer.bat   # 起動
-  scripts/                 # 正本スクリプト
-  config/env.example       # .env テンプレ
-  .venv/                   # setup で作成（gitignore）
-  paperlessprinter/        # setup で clone（gitignore）
-  spool/ inbox/ logs/      # ランタイム（gitignore）
+  start-fake-printer.bat   # launch
+  scripts/                 # canonical scripts
+  config/env.example       # .env template
+  .venv/                   # created by setup (gitignored)
+  paperlessprinter/        # cloned by setup (gitignored)
+  spool/ inbox/ logs/      # runtime (gitignored)
 ```
 
-詳細は [docs/reference.md](docs/reference.md) を参照してください。
+See [docs/reference.md](docs/reference.md) for architecture and troubleshooting.
 
-## ライセンス
+## License
 
-- 本リポジトリのラッパーコード: **MIT**（[LICENSE](LICENSE)）
-- paperlessprinter: **AGPL-3.0**（[NOTICE](NOTICE)）
+- Wrapper code in this repo: **MIT** ([LICENSE](LICENSE))
+- paperlessprinter: **AGPL-3.0** ([NOTICE](NOTICE))
 
-LAN / プライベートネットワーク内での利用を想定しています。インターネット公開はしないでください。
+Intended for **LAN / private networks only**. Do not expose to the public internet.

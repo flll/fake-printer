@@ -1,6 +1,6 @@
-# fake-printer — 参照
+# fake-printer — reference
 
-## アーキテクチャ
+## Architecture
 
 ```
 [Client: Win/Mac/iOS]
@@ -15,79 +15,79 @@
 [inbox/<stamp>_<name>.pdf  or  _pNNN.png]
 ```
 
-mDNS（UDP 5353）で `_ipp._tcp` + AirPrint サブタイプを広告 → iPhone が自動発見。
+mDNS (UDP 5353) advertises `_ipp._tcp` plus an AirPrint subtype so iPhones can auto-discover the printer.
 
-## パス一覧（リポジトリ内完結）
+## Paths (self-contained in the repo)
 
-| 用途 | パス |
-|------|------|
-| リポジトリルート | clone 先（= 既定の install root） |
-| 起動 | `start-fake-printer.bat` |
-| ダッシュボード | `scripts/dashboard.py` |
-| paperlessprinter | `paperlessprinter/`（setup で clone） |
+| Purpose | Path |
+|---------|------|
+| Repository root | clone destination (= default install root) |
+| Launch | `start-fake-printer.bat` |
+| Dashboard | `scripts/dashboard.py` |
+| paperlessprinter | `paperlessprinter/` (cloned by setup) |
 | venv | `.venv/` |
 | spool | `spool/` |
 | inbox | `inbox/` |
-| ログ | `logs/server.log` / `logs/mdns.log` |
+| Logs | `logs/server.log` / `logs/mdns.log` |
 
-## 後処理（postprocess.py）
+## Post-processing (postprocess.py)
 
-ジョブ完了時に `dashboard.py` がバックグラウンドで実行:
+`dashboard.py` runs this in the background when a job completes:
 
-1. `document.bin` が PDF か判定（先頭 `%PDF`）
-2. PyMuPDF でテキスト層の有無を判定（20 文字以上で成功）
-3. **成功**: `document.pdf`、PNG 削除、inbox に `.pdf` のみ
-4. **フォールバック**: PNG 保持、inbox に `_p001.png` … をコピー
+1. Check whether `document.bin` starts with `%PDF`
+2. Use PyMuPDF to detect a text layer (success if ≥ 20 non-whitespace characters)
+3. **Success**: keep `document.pdf`, delete PNGs, copy `.pdf` to inbox only
+4. **Fallback**: keep PNGs, copy `_p001.png` … to inbox
 
-手動実行: `.venv\Scripts\python.exe scripts\postprocess.py <job_dir>`
+Manual run: `.venv\Scripts\python.exe scripts\postprocess.py <job_dir>`
 
-## ダッシュボード
+## Dashboard
 
-`start-fake-printer.bat` → `scripts/dashboard.py` が **server.py + advertise-ipp-mdns.py を子プロセスとして起動**し、Windows Job Object（`KILL_ON_JOB_CLOSE`）に束ねる。
+`start-fake-printer.bat` → `scripts/dashboard.py` spawns **server.py** and **advertise-ipp-mdns.py** as children, bound to a Windows Job Object (`KILL_ON_JOB_CLOSE`).
 
-- rich の枠線パネル（IPP URL / Spool / Inbox / mDNS / Server / Uptime / Captured / 進捗）
-- 生ログは `logs/` のみ（コンソールには出さない）
+- rich bordered panels (IPP URL / Spool / Inbox / mDNS / Server / Uptime / Captured / progress)
+- Raw logs go to `logs/` only (not the console)
 
-## 主要 .env 変数
+## Key .env variables
 
-| 変数 | 既定 | 説明 |
-|------|------|------|
-| `IPP_LISTEN_HOST` | `0.0.0.0` | バインドアドレス |
-| `IPP_LISTEN_PORT` | `8631` | IPP ポート |
-| `IPP_SPOOL_DIR` | `spool/` | ジョブ保存先 |
-| `IPP_RENDER_DPI` | `200` | レンダリング解像度 |
-| `POST_ENDPOINT` | （空） | 空 = store-only |
-| `IPP_SHARED_TOKEN` | （空） | 設定時は `X-IPP-Token` 必須 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IPP_LISTEN_HOST` | `0.0.0.0` | Bind address |
+| `IPP_LISTEN_PORT` | `8631` | IPP port |
+| `IPP_SPOOL_DIR` | `spool/` | Job storage |
+| `IPP_RENDER_DPI` | `200` | Render DPI |
+| `POST_ENDPOINT` | (empty) | Empty = store-only (no outbound POST) |
+| `IPP_SHARED_TOKEN` | (empty) | If set, clients must send `X-IPP-Token` |
 
-## トラブルシュート
+## Troubleshooting
 
-### doctor が `MISSING: python`
+### doctor reports `MISSING: python`
 
 ```powershell
 winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements
 ```
 
-新しいターミナルで `pwsh scripts/setup.ps1` を再実行。
+Open a new terminal and run `pwsh scripts/setup.ps1` again.
 
-### iPhone にプリンターが出ない
+### iPhone does not show the printer
 
-1. `pwsh scripts/doctor.ps1` でファイアウォールと venv を確認
-2. 同一 Wi‑Fi / 同一サブネットか確認
-3. 管理者で `pwsh scripts/open-firewall.ps1`
+1. Run `pwsh scripts/doctor.ps1` — check firewall and venv
+2. Confirm same Wi‑Fi / subnet (guest networks often block mDNS)
+3. Run `pwsh scripts/open-firewall.ps1` as Administrator
 
-### 印刷してもファイルが出ない
+### Print job produces no files
 
-1. `spool/` と `logs/server.log` を確認
-2. `pwsh scripts/stop.ps1` 後に `start-fake-printer.bat` を再起動
+1. Check `spool/` and `logs/server.log`
+2. Run `pwsh scripts/stop.ps1`, then restart `start-fake-printer.bat`
 
-### ポート 8631 が使用中
+### Port 8631 already in use
 
 ```powershell
 Get-NetTCPConnection -LocalPort 8631 -ErrorAction SilentlyContinue
 pwsh scripts/stop.ps1
 ```
 
-## ライセンス
+## License
 
-- paperlessprinter: AGPL-3.0（[NOTICE](../NOTICE)）
-- 本リポジトリのラッパー: MIT（[LICENSE](../LICENSE)）
+- paperlessprinter: AGPL-3.0 ([NOTICE](../NOTICE))
+- Wrapper in this repo: MIT ([LICENSE](../LICENSE))

@@ -126,14 +126,14 @@ def process_job(job_dir: Path, inbox_dir: Path | None = None) -> dict:
 
     # ── not PDF (raster etc.) ────────────────────────────────────────────────
     if not doc_bin.exists():
-        refs = ", ".join(p.name for p in pngs) if pngs else "(なし)"
-        status = f"テキスト抽出不可 → PNG にフォールバックしました（{refs} を参照）"
+        refs = ", ".join(p.name for p in pngs) if pngs else "(none)"
+        status = f"No text layer — fell back to PNG (see {refs})"
         return finish("png", status=status)
 
     raw = doc_bin.read_bytes()
     if not _is_pdf(raw):
-        refs = ", ".join(p.name for p in pngs) if pngs else "(なし)"
-        status = f"テキスト抽出不可 → PNG にフォールバックしました（{refs} を参照）"
+        refs = ", ".join(p.name for p in pngs) if pngs else "(none)"
+        status = f"No text layer — fell back to PNG (see {refs})"
         return finish("png", status=status)
 
     # ── PDF: check text layer ────────────────────────────────────────────────
@@ -151,11 +151,11 @@ def process_job(job_dir: Path, inbox_dir: Path | None = None) -> dict:
                 png.unlink()
             except OSError:
                 pass
-        return finish("text", chars=chars, status="PDF保存（テキスト層あり）")
+        return finish("text", chars=chars, status="Saved PDF with text layer")
 
     # ── image-only PDF → PNG fallback ────────────────────────────────────────
-    refs = ", ".join(p.name for p in pngs) if pngs else "(なし)"
-    status = f"テキスト抽出不可 → PDF→PNG にフォールバックしました（{refs} を参照）"
+    refs = ", ".join(p.name for p in pngs) if pngs else "(none)"
+    status = f"テキスト抽出不可 → PDF→PNG にフォールバックしました（{refs})"
     return finish("png", status=status)
 
 

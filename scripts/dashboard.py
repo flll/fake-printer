@@ -367,11 +367,11 @@ def run_rich(state: State, manifest: dict, started_at: float, procs) -> None:
         t = Table.grid(padding=(0, 1))
         t.add_column()
         t.add_row(Text("iPhone / Mac", style="bold"))
-        t.add_row(Text("  AirPrint一覧に自動表示", style="dim"))
+        t.add_row(Text("  Shows in AirPrint list", style="dim"))
         t.add_row("")
         t.add_row(Text("Windows", style="bold"))
-        t.add_row(Text("  プリンター手動追加 → IPP", style="dim"))
-        t.add_row(Text("  URLは左パネル", style="dim"))
+        t.add_row(Text("  Add printer manually → IPP", style="dim"))
+        t.add_row(Text("  URL in left panel", style="dim"))
         return Panel(t, title="Connect", border_style="grey50", padding=(1, 1))
 
     def build_recent() -> Panel:
