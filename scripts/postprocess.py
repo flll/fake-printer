@@ -155,7 +155,7 @@ def process_job(job_dir: Path, inbox_dir: Path | None = None) -> dict:
 
     # ── image-only PDF → PNG fallback ────────────────────────────────────────
     refs = ", ".join(p.name for p in pngs) if pngs else "(none)"
-    status = f"テキスト抽出不可 → PDF→PNG にフォールバックしました（{refs})"
+    status = f"No text layer — fell back to PNG from PDF (see {refs})"
     return finish("png", status=status)
 
 
