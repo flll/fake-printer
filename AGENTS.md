@@ -59,6 +59,12 @@ Logs for debugging: `logs/server.log`, `logs/mdns.log`.
 - `scripts/dashboard.py` — foreground UI; spawns `paperlessprinter/server.py` + `scripts/advertise-ipp-mdns.py`
 - `scripts/postprocess.py` — PDF text detection, inbox copy
 - `INSTALL_ROOT` = repository root (parent of `scripts/`)
+
+Gotcha: a PDF can have a "text layer" that extracts as control-char garbage
+when the source omits a ToUnicode CMap (e.g. iText Identity-H fonts) — glyphs
+render fine but text is unreadable. Do not classify TEXT by character count
+alone; `_looks_readable()` gates on a readable-char ratio. Covered by
+`tests/test_postprocess.py` (run: `python tests/test_postprocess.py`).
 - Runtime dirs (gitignored): `.venv/`, `paperlessprinter/`, `spool/`, `inbox/`, `logs/`, `install.json`
 
 ## Conventions for contributors
