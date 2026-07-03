@@ -52,14 +52,49 @@ if ((Test-Path -LiteralPath $script:IppPrinterRepoDir) -and $Force) {
     Remove-Item -LiteralPath $script:IppPrinterRepoDir -Recurse -Force
 }
 
+function Test-PaperlessPatchApplied([string]$PatchPath) {
+    git -C $script:IppPrinterRepoDir apply --reverse --check $PatchPath 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Undo-PaperlessPatches {
+    $patchDir = Join-Path $script:IppPrinterRepoRoot 'patches'
+    if (-not (Test-Path -LiteralPath $patchDir)) { return }
+    foreach ($patch in Get-ChildItem -LiteralPath $patchDir -Filter '*.patch' | Sort-Object Name -Descending) {
+        if (Test-PaperlessPatchApplied $patch.FullName) {
+            git -C $script:IppPrinterRepoDir apply --reverse $patch.FullName
+            Write-Host "patch: reverted for update - $($patch.Name)"
+        }
+    }
+}
+
+function Invoke-PaperlessPatches {
+    $patchDir = Join-Path $script:IppPrinterRepoRoot 'patches'
+    if (-not (Test-Path -LiteralPath $patchDir)) { return }
+    foreach ($patch in Get-ChildItem -LiteralPath $patchDir -Filter '*.patch' | Sort-Object Name) {
+        if (Test-PaperlessPatchApplied $patch.FullName) {
+            Write-Host "patch: already applied - $($patch.Name)"
+            continue
+        }
+        git -C $script:IppPrinterRepoDir apply --check $patch.FullName 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "patch: does not apply cleanly (upstream changed?) - $($patch.Name)"
+        }
+        git -C $script:IppPrinterRepoDir apply $patch.FullName
+        Write-Host "patch: applied - $($patch.Name)"
+    }
+}
+
 if (-not (Test-Path -LiteralPath $script:IppPrinterRepoDir)) {
     Write-Host "paperlessprinter: cloning -> $script:IppPrinterRepoDir"
     git clone --depth 1 $script:PaperlessRepoUrl $script:IppPrinterRepoDir
 }
 else {
     Write-Host 'paperlessprinter: updating'
+    Undo-PaperlessPatches
     git -C $script:IppPrinterRepoDir pull --ff-only
 }
+Invoke-PaperlessPatches
 
 if (-not (Test-Path -LiteralPath $script:IppPrinterVenvPython)) {
     Write-Host 'venv: creating'
