@@ -17,9 +17,10 @@ ENV_FILE = INSTALL_ROOT / "paperlessprinter" / ".env"
 MANIFEST = INSTALL_ROOT / "install.json"
 
 PRINTER_NAME = "Fake Printer"
+# NOTE: _ipps (TLS) is intentionally NOT advertised — the server speaks plain
+# HTTP only; advertising IPPS makes clients attempt TLS and fail ("offline").
 SERVICE_TYPES = [
     "_ipp._tcp.local.",
-    "_ipps._tcp.local.",
 ]
 
 
@@ -60,7 +61,6 @@ def build_txt_records(port: int) -> dict[bytes, bytes]:
         "URF": "W8,SRGB24,CP255,DM1,FN3,IS0-0,MT1-8-11,OB10,PQ4-5,RS300,ST13,V1.4,W8",
         "Color": "T",
         "Duplex": "F",
-        "TLS": "1.3",
     }
     return {k.encode("utf-8"): v.encode("utf-8") for k, v in fields.items()}
 
