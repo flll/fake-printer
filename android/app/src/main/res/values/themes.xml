@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppCompat 非依存の DayNight: values / values-night で親テーマを切替 -->
+    <style name="Theme.FakePrinter" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ldsg_surface</item>
+        <item name="android:textColorPrimary">@color/ldsg_text</item>
+        <item name="android:textColorSecondary">@color/ldsg_text_sub</item>
+        <item name="android:colorAccent">@color/ldsg_brand_primary</item>
+        <item name="android:statusBarColor">@color/ldsg_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/ldsg_surface</item>
+    </style>
+</resources>

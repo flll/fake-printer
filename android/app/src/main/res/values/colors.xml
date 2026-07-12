@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LDSG v1.5.0 トークン移植（ldsg-design/assets/ldsg-tokens.css）— ライト割当
+     直値 #hex はこのファイル（と values-night 版）にのみ書く -->
+<resources>
+    <color name="ldsg_brand_primary">#4CC764</color> <!-- LINE Green Android 公式値 -->
+    <color name="ldsg_brand_primary_alt">#18A352</color> <!-- lightgreen-700: 白地で読める緑テキスト用 -->
+    <color name="ldsg_brand_secondary">#202A43</color>
+    <color name="ldsg_on_brand">#FFFFFF</color>
+    <color name="ldsg_role_negative">#FF334B</color>
+    <color name="ldsg_role_link">#4D73FF</color>
+    <color name="ldsg_role_disabled">#E4E4E4</color>
+    <color name="ldsg_surface">#FFFFFF</color>
+    <color name="ldsg_surface_raised">#F5F5F5</color>
+    <color name="ldsg_surface_overlay">#FFFFFF</color>
+    <color name="ldsg_border">#DFDFDF</color>
+    <color name="ldsg_text">#000000</color>
+    <color name="ldsg_text_sub">#616161</color>
+    <color name="ldsg_text_tertiary">#949494</color>
+</resources>

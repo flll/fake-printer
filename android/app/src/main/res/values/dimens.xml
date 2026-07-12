@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LDSG spacing(4px基数) / radius / typography -->
+<resources>
+    <dimen name="ldsg_space_1">4dp</dimen>
+    <dimen name="ldsg_space_2">8dp</dimen>
+    <dimen name="ldsg_space_3">12dp</dimen>
+    <dimen name="ldsg_space_4">16dp</dimen>
+    <dimen name="ldsg_space_5">24dp</dimen>
+    <dimen name="ldsg_space_6">32dp</dimen>
+    <dimen name="ldsg_space_7">48dp</dimen>
+    <dimen name="ldsg_space_8">64dp</dimen>
+    <dimen name="ldsg_radius_s">4dp</dimen>
+    <dimen name="ldsg_radius_m">8dp</dimen>
+    <dimen name="ldsg_radius_l">13dp</dimen>
+    <dimen name="ldsg_fs_title_xl">24sp</dimen>
+    <dimen name="ldsg_fs_title_l">20sp</dimen>
+    <dimen name="ldsg_fs_title_m">17sp</dimen>
+    <dimen name="ldsg_fs_text_m">15sp</dimen>
+    <dimen name="ldsg_fs_text_s">13sp</dimen>
+    <dimen name="ldsg_fs_text_xs">11sp</dimen>
+</resources>
