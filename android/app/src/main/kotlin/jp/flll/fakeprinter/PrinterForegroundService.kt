@@ -25,6 +25,7 @@ class PrinterForegroundService : Service() {
     private var core: IppServerCore? = null
     private var jmdns: JmDNS? = null
     private var multicastLock: WifiManager.MulticastLock? = null
+    private val forwardExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -43,14 +44,40 @@ class PrinterForegroundService : Service() {
                     acquire()
                 }
 
+                val forwarder = ForwardManager(
+                    dir = inboxDir(this),
+                    store = PrefsPendingStore(this),
+                    sender = { file ->
+                        val p = Prefs(this)
+                        IppClient.printJob(
+                            host = p.forwardHost,
+                            port = p.forwardPort,
+                            path = "/ipp/print",
+                            jobName = file.name,
+                            userName = Build.MODEL ?: "android",
+                            document = file.readBytes(),
+                        ).isSuccess
+                    },
+                    log = { Log.i(TAG, it) },
+                )
+
                 val server = IppServerCore(
                     port = prefs.port,
                     printerName = prefs.printerName,
                     saveDir = inboxDir(this),
                     log = { Log.i(TAG, it) },
                 )
+                // 転送は別スレッドで: 印刷元への IPP 応答を PC 転送で待たせない
+                server.onDocumentSaved = { file ->
+                    if (Prefs(this).forwardEnabled && file.extension == "pdf") {
+                        forwardExecutor.execute { forwarder.enqueue(file) }
+                    }
+                }
                 server.start()
                 core = server
+                if (prefs.forwardEnabled) {
+                    forwardExecutor.execute { forwarder.flush() } // オフライン中に溜まった分を再試行
+                }
 
                 if (address != null) {
                     registerMdns(address, prefs.printerName, prefs.port)
@@ -93,6 +120,7 @@ class PrinterForegroundService : Service() {
         }
         core = null
         jmdns = null
+        forwardExecutor.shutdown()
         super.onDestroy()
     }
 
