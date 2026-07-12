@@ -10,12 +10,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
-/** Minimal settings screen: fake-printer host / port / IPP path. */
+/** Printer name / listen port settings (restart the printer to apply). */
 class SettingsActivity : Activity() {
 
-    private lateinit var hostInput: EditText
+    private lateinit var nameInput: EditText
     private lateinit var portInput: EditText
-    private lateinit var pathInput: EditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,20 +28,18 @@ class SettingsActivity : Activity() {
 
         fun label(text: String) = root.addView(TextView(this).apply { this.text = text })
 
-        label("サーバ IP / ホスト名")
-        hostInput = EditText(this).apply { setText(prefs.host) }
-        root.addView(hostInput)
+        label("プリンタ名（他の端末に表示される名前）")
+        nameInput = EditText(this).apply { setText(prefs.printerName) }
+        root.addView(nameInput)
 
-        label("ポート")
+        label("待受ポート")
         portInput = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
             setText(prefs.port.toString())
         }
         root.addView(portInput)
 
-        label("IPP パス")
-        pathInput = EditText(this).apply { setText(prefs.path) }
-        root.addView(pathInput)
+        label("※ 変更はプリンタの停止→開始で反映されます")
 
         root.addView(Button(this).apply {
             text = "保存"
@@ -58,16 +55,14 @@ class SettingsActivity : Activity() {
 
     private fun save() {
         val prefs = Prefs(this)
-        val host = hostInput.text.toString().trim()
+        val name = nameInput.text.toString().trim()
         val port = portInput.text.toString().trim().toIntOrNull()
-        val path = pathInput.text.toString().trim()
-        if (host.isEmpty() || port == null || port !in 1..65535 || !path.startsWith("/")) {
-            Toast.makeText(this, "入力値が不正です", Toast.LENGTH_SHORT).show()
+        if (name.isEmpty() || port == null || port !in 1024..65535) {
+            Toast.makeText(this, "入力値が不正です（ポートは1024〜65535）", Toast.LENGTH_SHORT).show()
             return
         }
-        prefs.host = host
+        prefs.printerName = name
         prefs.port = port
-        prefs.path = path
         Toast.makeText(this, "保存しました", Toast.LENGTH_SHORT).show()
         finish()
     }
