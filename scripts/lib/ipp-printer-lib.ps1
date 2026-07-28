@@ -1,4 +1,4 @@
-# Shared helpers for fake-printer scripts
+# Shared helpers for fake-printer scripts (Rust single-binary edition)
 $ErrorActionPreference = 'Stop'
 
 # scripts/lib -> scripts -> repo root
@@ -6,7 +6,7 @@ $script:IppPrinterRepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Pare
 $script:IppPrinterScriptsDir = Join-Path $script:IppPrinterRepoRoot 'scripts'
 $script:IppPrinterTaskServer = 'FakePrinter'
 $script:IppPrinterTaskMdns = 'FakePrinterMdns'
-$script:PaperlessRepoUrl = 'https://github.com/paperlesspaper/paperlessprinter.git'
+$script:IppPrinterReleaseExe = Join-Path $script:IppPrinterRepoRoot 'rust\target\release\fake-printer.exe'
 
 function Get-IppPrinterInstallRoot {
     param([string]$Override = '')
@@ -29,6 +29,7 @@ function Get-IppPrinterInstallRoot {
 
     # Legacy installs (migration)
     foreach ($legacy in @(
+            (Join-Path $env:USERPROFILE 'OneDrive\fake-printer'),
             'C:\OneDrive\fake-printer',
             (Join-Path $env:USERPROFILE '.cursor\lenovo-ipp-printer')
         )) {
@@ -41,11 +42,11 @@ function Get-IppPrinterInstallRoot {
 }
 
 $script:IppPrinterInstallRoot = Get-IppPrinterInstallRoot
-$script:IppPrinterRepoDir = Join-Path $script:IppPrinterInstallRoot 'paperlessprinter'
-$script:IppPrinterVenvPython = Join-Path $script:IppPrinterInstallRoot '.venv\Scripts\python.exe'
+$script:IppPrinterExe = Join-Path $script:IppPrinterInstallRoot 'fake-printer.exe'
 $script:IppPrinterManifest = Join-Path $script:IppPrinterInstallRoot 'install.json'
 $script:IppPrinterLogsDir = Join-Path $script:IppPrinterInstallRoot 'logs'
 $script:IppPrinterStartBat = Join-Path $script:IppPrinterInstallRoot 'start-fake-printer.bat'
+$script:IppPrinterEnvFile = Join-Path $script:IppPrinterInstallRoot '.env'
 
 function Get-DefaultSpoolDir {
     return (Join-Path $script:IppPrinterInstallRoot 'spool')
@@ -86,25 +87,6 @@ function Test-CommandExists([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-function Install-WingetPackage([string]$Id, [string]$Label) {
-    if (-not (Test-CommandExists winget)) {
-        Write-Warning "winget not found; install $Label manually"
-        return $false
-    }
-    $list = winget list --id $Id --accept-source-agreements 2>$null | Out-String
-    if ($list -match [regex]::Escape($Id)) {
-        Write-Host "$Label : already installed ($Id)"
-        return $true
-    }
-    Write-Host "$Label : installing via winget ($Id)..."
-    winget install --id $Id --accept-package-agreements --accept-source-agreements --disable-interactivity 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "winget install failed for $Id (exit $LASTEXITCODE); install manually if needed"
-        return $false
-    }
-    return $true
-}
-
 function Read-InstallManifest {
     if (-not (Test-Path -LiteralPath $script:IppPrinterManifest)) {
         return $null
@@ -132,7 +114,7 @@ function Remove-LegacyScheduledTasks {
     }
 }
 
-function Write-StartBat([string]$InstallRoot, [string]$IppUrl, [string]$SpoolDir) {
+function Write-StartBat([string]$InstallRoot) {
     $batPath = Join-Path $InstallRoot 'start-fake-printer.bat'
     if ($InstallRoot -eq $script:IppPrinterRepoRoot) {
         Write-Host "start bat: $batPath (committed; no rewrite needed)"
@@ -143,14 +125,13 @@ function Write-StartBat([string]$InstallRoot, [string]$IppUrl, [string]$SpoolDir
         'title Fake Printer'
         'cd /d "%~dp0"'
         ''
-        'set "PY=%~dp0.venv\Scripts\python.exe"'
-        'if not exist "%PY%" ('
-        '  echo [ERROR] Not set up. Run: pwsh scripts\setup.ps1'
+        'if not exist "%~dp0fake-printer.exe" ('
+        '  echo [ERROR] fake-printer.exe not found. Run: pwsh scripts\setup.ps1'
         '  pause'
         '  exit /b 1'
         ')'
         ''
-        '"%PY%" "%~dp0scripts\dashboard.py"'
+        '"%~dp0fake-printer.exe"'
     )
     Set-Content -LiteralPath $batPath -Value ($lines -join "`r`n") -Encoding ASCII
     Write-Host "start bat: $batPath"

@@ -2,11 +2,14 @@
 title Fake Printer
 cd /d "%~dp0"
 
-set "PY=%~dp0.venv\Scripts\python.exe"
-if not exist "%PY%" (
-  echo [ERROR] Not set up. Run: pwsh scripts\setup.ps1
-  pause
-  exit /b 1
+if exist "%~dp0fake-printer.exe" (
+  "%~dp0fake-printer.exe"
+  exit /b %errorlevel%
 )
-
-"%PY%" "%~dp0scripts\dashboard.py"
+if exist "%~dp0rust\target\release\fake-printer.exe" (
+  "%~dp0rust\target\release\fake-printer.exe"
+  exit /b %errorlevel%
+)
+echo [ERROR] fake-printer.exe not found. Build it first: cd rust ^&^& cargo build --release
+pause
+exit /b 1

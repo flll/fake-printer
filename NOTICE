@@ -1,31 +1,30 @@
 fake-printer
 ============
 
-This repository contains wrapper scripts (dashboard, postprocess, setup helpers)
+Helper scripts in this repository (scripts/, start-fake-printer.bat) are
 licensed under the MIT License. See LICENSE.
 
-Third-party dependency
-----------------------
+Engine (rust/)
+--------------
 
-At setup time, this project clones and runs:
+`rust/` contains the single-binary engine. Its IPP server is a port of:
 
   paperlessprinter — https://github.com/paperlesspaper/paperlessprinter
   License: GNU Affero General Public License v3.0 (AGPL-3.0)
 
-paperlessprinter is NOT bundled in this repository. It is downloaded into
-`paperlessprinter/` (gitignored) when you run `scripts/setup.ps1`.
-
-If you modify paperlessprinter or distribute a combined work that includes it,
-you must comply with the AGPL-3.0 terms for that component.
-
-Rust port (rust/)
------------------
-
-`rust/` contains a single-binary Rust port whose IPP engine is a port of
-paperlessprinter. The entire Rust crate is therefore licensed under
-AGPL-3.0 (see rust/LICENSE), not MIT.
+The entire Rust crate is therefore licensed under AGPL-3.0 (see rust/LICENSE),
+not MIT.
 
 The Rust build embeds PDFium (https://pdfium.googlesource.com/pdfium/),
 BSD-3-Clause, obtained from https://github.com/bblanchon/pdfium-binaries
 (release chromium/7881, SHA-256 pinned in rust/build.rs). See
-rust/third_party/pdfium/LICENSE.
+rust/third_party/pdfium/LICENSE. The dll is downloaded at build time and is
+never committed to this repository.
+
+History
+-------
+
+Until 2026-07, this project ran paperlessprinter directly (cloned at setup
+into `paperlessprinter/`, gitignored) with Python wrapper scripts. The Python
+stack has been replaced by the Rust port; legacy installs may still contain
+the clone and are subject to AGPL-3.0 for that component.
