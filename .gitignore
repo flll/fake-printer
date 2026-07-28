@@ -23,3 +23,7 @@ Thumbs.db
 desktop.ini
 .idea/
 .vscode/
+
+# Rust
+rust/target/
+rust/third_party/pdfium/pdfium.dll
