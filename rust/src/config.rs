@@ -42,6 +42,8 @@ pub struct Config {
     pub post_file_field: String,
     pub post_include_meta_fields: bool,
     pub post_send_all_pages: bool,
+    /// Set when the .env file failed to parse (logged after logging init).
+    pub env_warning: Option<String>,
 }
 
 fn env_str(name: &str, default: &str) -> String {
@@ -92,12 +94,21 @@ impl Config {
 
         // Legacy layout keeps .env inside the cloned engine directory;
         // prefer it, then fall back to .env next to the exe.
+        // Unlike python-dotenv, dotenvy rejects unquoted values containing
+        // spaces AND stops at the failing line — surface that loudly.
+        let mut env_warning = None;
         for candidate in [
             install_root.join("paperlessprinter").join(".env"),
             install_root.join(".env"),
         ] {
             if candidate.exists() {
-                let _ = dotenvy::from_path(&candidate);
+                if let Err(e) = dotenvy::from_path(&candidate) {
+                    env_warning = Some(format!(
+                        "{} failed to parse ({e}); values after the failing line are \
+                         IGNORED — quote values containing spaces, e.g. KEY=\"a b\"",
+                        candidate.display()
+                    ));
+                }
                 break;
             }
         }
@@ -165,6 +176,7 @@ impl Config {
             temp_dir,
             inbox_dir,
             install_root,
+            env_warning,
         }
     }
 }

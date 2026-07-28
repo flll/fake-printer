@@ -56,6 +56,10 @@ fn main() -> std::io::Result<()> {
     let headless = std::env::args().any(|a| a == "--headless");
     let config = Config::load();
     let _log_guard = init_logging(&config, headless);
+    if let Some(warning) = &config.env_warning {
+        eprintln!("[WARN] {warning}");
+        tracing::warn!("{warning}");
+    }
 
     // Fail fast if the embedded pdfium.dll cannot be extracted.
     match render::ensure_pdfium_dll() {

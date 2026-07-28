@@ -68,9 +68,15 @@ Client-specific behaviors carried over from production tuning:
 - Create-Job override caching for macOS, which drops query params on the
   follow-up Send-Document
 
-Known deviation: `Expect: 100-continue` is answered automatically by hyper
-(the Python default suppressed it as a reverse-proxy workaround; irrelevant
-on a direct LAN connection). `meta.json` is UTF-8 instead of `\uXXXX`-escaped.
+Known deviations:
+
+- `Expect: 100-continue` is answered automatically by hyper (the Python
+  default suppressed it as a reverse-proxy workaround; irrelevant on a
+  direct LAN connection)
+- `meta.json` is UTF-8 instead of `\uXXXX`-escaped
+- `.env` values containing spaces MUST be quoted (`PRINTER_NAME="A B"`) —
+  dotenvy rejects unquoted spaces and skips the rest of the file
+  (python-dotenv tolerated them); a parse failure is logged loudly at startup
 
 ## Verification
 
