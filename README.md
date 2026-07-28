@@ -10,6 +10,20 @@ Keywords: virtual printer, IPP, AirPrint, mDNS, print capture, agent inbox, Wind
 
 For AI coding agents, see [AGENTS.md](AGENTS.md). Security model: [SECURITY.md](SECURITY.md).
 
+## Rust port (single exe)
+
+[`rust/`](rust/) contains a single-binary Rust port: one `fake-printer.exe`
+(~18 MB, pdfium embedded), no Python, no venv — copy it to any Windows x64
+machine and run it. Same IPP behavior, same `.env` / `install.json` keys, same
+inbox layout, ratatui dashboard. See [rust/README.md](rust/README.md).
+
+```powershell
+cd rust && cargo build --release
+.\start-fake-printer-rust.bat
+```
+
+The Python stack below remains available while the Rust port stabilizes.
+
 ## Requirements
 
 - Windows 10 or later
@@ -94,5 +108,7 @@ See [docs/reference.md](docs/reference.md) for architecture and troubleshooting.
 
 - Wrapper code in this repo: **MIT** ([LICENSE](LICENSE))
 - paperlessprinter: **AGPL-3.0** ([NOTICE](NOTICE))
+- Rust port (`rust/`): **AGPL-3.0** — engine port of paperlessprinter
+  ([rust/LICENSE](rust/LICENSE); embedded PDFium is BSD-3-Clause)
 
 Intended for **LAN / private networks only**. Do not expose to the public internet.

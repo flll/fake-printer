@@ -67,6 +67,14 @@ alone; `_looks_readable()` gates on a readable-char ratio. Covered by
 `tests/test_postprocess.py` (run: `python tests/test_postprocess.py`).
 - Runtime dirs (gitignored): `.venv/`, `paperlessprinter/`, `spool/`, `inbox/`, `logs/`, `install.json`
 
+## Rust port
+
+`rust/` holds a single-binary port (`fake-printer.exe`, AGPL-3.0): same IPP
+behavior and config keys, pdfium embedded, ratatui dashboard, logs unified
+into `logs/server.log`. Launch via `start-fake-printer-rust.bat`. The garbled
+text-layer gotcha above IS handled there (`looks_readable` in
+`rust/src/postprocess.rs`). Details: [rust/README.md](rust/README.md).
+
 ## Conventions for contributors
 
 - **English only** in user-facing strings, docs, and agent docs
