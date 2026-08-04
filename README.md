@@ -2,20 +2,19 @@
 
 **Virtual IPP / AirPrint printer for Windows** — capture print jobs from LAN clients into a local **agent-friendly inbox** (PDF with text layer, or PNG fallback).
 
-Keywords: virtual printer, IPP, AirPrint, mDNS, print capture, agent inbox, Windows.
+Keywords: virtual printer, IPP, AirPrint, mDNS, print capture, agent inbox, Windows, Rust.
 
-- **Engine**: [paperlessprinter](https://github.com/paperlesspaper/paperlessprinter) (cloned at setup, AGPL-3.0)
-- **UI**: rich bordered dashboard (close the window to stop)
-- **Output**: `inbox/` — PDF when text is extractable, otherwise per-page PNG
+- **Engine**: single Rust binary ([`rust/`](rust/), AGPL-3.0) — no Python, no venv, pdfium embedded
+- **UI**: ratatui bordered dashboard (close the window to stop); `--headless` for logs only
+- **Output**: `inbox/` — PDF when a readable text layer exists, otherwise per-page PNG
 
 For AI coding agents, see [AGENTS.md](AGENTS.md). Security model: [SECURITY.md](SECURITY.md).
 
 ## Requirements
 
-- Windows 10 or later
-- [PowerShell 7+](https://github.com/PowerShell/PowerShell)
-- Python 3.12+ (`setup.ps1` tries winget if missing)
-- Git
+- Windows 10 or later (x64)
+- [Rust](https://rustup.rs) (build once; the exe is then copy-anywhere)
+- [PowerShell 7+](https://github.com/PowerShell/PowerShell) for the helper scripts
 - Ghostscript (optional — PostScript jobs only)
 
 ## Quick start
@@ -23,11 +22,14 @@ For AI coding agents, see [AGENTS.md](AGENTS.md). Security model: [SECURITY.md](
 ```powershell
 git clone https://github.com/flll/fake-printer.git
 cd fake-printer
-pwsh scripts/setup.ps1
+pwsh scripts/setup.ps1     # cargo build --release + .env + dirs + firewall
 .\start-fake-printer.bat
 ```
 
-Closing the `start-fake-printer.bat` window stops the server and mDNS advertiser.
+Closing the `start-fake-printer.bat` window stops everything (single process).
+
+Already have a built `fake-printer.exe`? Just copy it to any folder and run it —
+`spool/`, `inbox/`, `logs/`, `temp/` are created next to the exe.
 
 ## Connect clients
 
@@ -40,14 +42,14 @@ The host IP is shown in the dashboard left panel.
 
 ## Agent integration
 
-After each job, `postprocess.py` copies artifacts into `inbox/`:
+After each job, built-in postprocessing copies artifacts into `inbox/`:
 
 | Condition | Inbox file |
 |-----------|------------|
-| PDF with text layer | `<YYYYMMDD_HHMM>_<jobname>.pdf` |
-| Image-only / fallback | `<YYYYMMDD_HHMM>_<jobname>_p001.png` … |
+| PDF with readable text layer | `<YYYYMMDD_HHMM>_<jobname>.pdf` |
+| Image-only / garbled text / fallback | `<YYYYMMDD_HHMM>_<jobname>_p001.png` … |
 
-Raw logs: `logs/server.log`, `logs/mdns.log`.
+Raw log: `logs/server.log`.
 
 ## Operations
 
@@ -55,7 +57,7 @@ Raw logs: `logs/server.log`, `logs/mdns.log`.
 pwsh scripts/doctor.ps1          # health check
 pwsh scripts/start.ps1           # launch bat in a new window
 pwsh scripts/stop.ps1            # stop stray processes
-pwsh scripts/setup.ps1 -Force    # re-clone paperlessprinter
+pwsh scripts/setup.ps1 -Force    # rebuild exe + rewrite .env
 ```
 
 ### Firewall
@@ -80,19 +82,21 @@ pwsh scripts/setup.ps1 -InstallRoot 'D:\my-fake-printer'
 
 ```
 fake-printer/
-  start-fake-printer.bat   # launch
-  scripts/                 # canonical scripts
-  config/env.example       # .env template
-  .venv/                   # created by setup (gitignored)
-  paperlessprinter/        # cloned by setup (gitignored)
+  start-fake-printer.bat   # launch (runs fake-printer.exe)
+  rust/                    # the engine — single-binary Rust crate
+  scripts/                 # PowerShell setup/ops helpers
+  config/env.example       # .env template (written to <install root>\.env)
   spool/ inbox/ logs/      # runtime (gitignored)
 ```
 
-See [docs/reference.md](docs/reference.md) for architecture and troubleshooting.
+Engine internals, config keys, and known deviations: [rust/README.md](rust/README.md).
+Architecture and troubleshooting: [docs/reference.md](docs/reference.md).
 
 ## License
 
-- Wrapper code in this repo: **MIT** ([LICENSE](LICENSE))
-- paperlessprinter: **AGPL-3.0** ([NOTICE](NOTICE))
+- Helper scripts (`scripts/`, bat): **MIT** ([LICENSE](LICENSE))
+- Engine (`rust/`): **AGPL-3.0** ([rust/LICENSE](rust/LICENSE)) — port of
+  [paperlessprinter](https://github.com/paperlesspaper/paperlessprinter);
+  embedded PDFium is BSD-3-Clause. Details: [NOTICE](NOTICE)
 
 Intended for **LAN / private networks only**. Do not expose to the public internet.

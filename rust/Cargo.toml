@@ -1,0 +1,29 @@
+[package]
+name = "fake-printer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.9"
+chrono = "0.4.45"
+dotenvy = "0.15.7"
+gethostname = "1.1.0"
+hyper = "1.11.0"
+image = "0.25.10"
+mdns-sd = "0.20.3"
+pdfium-render = "0.9.3"
+percent-encoding = "2.3.2"
+ratatui = "0.30.2"
+reqwest = { version = "0.13.4", default-features = false, features = ["multipart", "native-tls"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "fs", "process", "io-util", "signal"] }
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+url = "2.5.8"
+uuid = { version = "1.24.0", features = ["v4"] }
+
+[build-dependencies]
+sha2 = "0.11.0"

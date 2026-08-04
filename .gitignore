@@ -1,21 +1,23 @@
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-
 # Runtime (repo-local)
 spool/
 inbox/
 logs/
 temp/
 install.json
+/fake-printer.exe
 
-# Third-party clone (AGPL; never commit)
-paperlessprinter/
+# Rust
+rust/target/
+rust/third_party/pdfium/pdfium.dll
 
 # Secrets / generated config
 .env
+
+# Legacy Python installs (pre-Rust clones may still contain these)
+.venv/
+__pycache__/
+*.py[cod]
+paperlessprinter/
 
 # OS / IDE
 .DS_Store
