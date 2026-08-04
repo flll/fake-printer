@@ -25,11 +25,13 @@ Not a fit for: cloud printing, enterprise SSO, or internet-exposed print endpoin
 
 ```powershell
 pwsh scripts/setup.ps1     # needs Rust (rustup.rs); builds rust/target/release
-.\start-fake-printer.bat
+.\fake-printer.exe
 ```
 
-Single process — closing the bat window stops the server, mDNS, and dashboard.
-A built `fake-printer.exe` is also copy-anywhere: runtime dirs are created next to it.
+Single process — closing the console window stops the server, mDNS, and dashboard.
+A second copy detects the running one (named mutex on the IPP port) and exits
+instead of starting. A built `fake-printer.exe` is copy-anywhere: runtime dirs
+are created next to it.
 
 ## Agent integration
 
@@ -50,7 +52,7 @@ Log for debugging: `logs/server.log` (server + mDNS + postprocess unified).
 |--------|---------|
 | `scripts/setup.ps1` | Build release exe, write `.env`, create dirs, firewall |
 | `scripts/doctor.ps1` | Preflight checks (exe, .env, firewall, port, healthz) |
-| `scripts/start.ps1` | Open `start-fake-printer.bat` in a new window |
+| `scripts/start.ps1` | Open `fake-printer.exe` in a new console window |
 | `scripts/stop.ps1` | Kill fake-printer.exe (and legacy Python) processes |
 | `scripts/open-firewall.ps1` | Allow TCP 8631 + UDP 5353 (admin) |
 

@@ -25,7 +25,7 @@ TLS and mark the printer "offline".
 | Purpose | Path |
 |---------|------|
 | Repository root | clone destination (= default install root) |
-| Launch | `start-fake-printer.bat` → `fake-printer.exe` |
+| Launch | `fake-printer.exe` (double-click or `scripts/start.ps1`) |
 | Engine source | `rust/` |
 | .env | `<install root>\.env` |
 | spool | `spool/` |
@@ -46,9 +46,15 @@ Runs in-process right after each job renders:
 
 ## Dashboard
 
-`start-fake-printer.bat` → `fake-printer.exe` — a single process running the
-IPP server, mDNS advertiser, and ratatui dashboard (event channels, no log
-tailing). Close the window / `q` / Ctrl+C to stop. `--headless` skips the UI.
+`fake-printer.exe` is a single process running the IPP server, mDNS advertiser,
+and ratatui dashboard (event channels, no log tailing). It names its own console
+window `fake-printer - <PRINTER_NAME>`. Close the window / `q` / Ctrl+C to stop.
+`--headless` skips the UI.
+
+Only one instance may run per IPP port. A second launch reports
+`already running on port <port>`, leaves the live process alone, and closes
+after a short countdown — it never advertises mDNS, which previously made the
+printer vanish from client lists.
 
 ## Key .env variables
 
@@ -88,7 +94,7 @@ pwsh scripts/setup.ps1
 ### Print job produces no files
 
 1. Check `spool/` and `logs/server.log`
-2. Run `pwsh scripts/stop.ps1`, then restart `start-fake-printer.bat`
+2. Run `pwsh scripts/stop.ps1`, then restart `fake-printer.exe`
 
 ### Port 8631 already in use
 

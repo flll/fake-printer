@@ -45,7 +45,6 @@ $script:IppPrinterInstallRoot = Get-IppPrinterInstallRoot
 $script:IppPrinterExe = Join-Path $script:IppPrinterInstallRoot 'fake-printer.exe'
 $script:IppPrinterManifest = Join-Path $script:IppPrinterInstallRoot 'install.json'
 $script:IppPrinterLogsDir = Join-Path $script:IppPrinterInstallRoot 'logs'
-$script:IppPrinterStartBat = Join-Path $script:IppPrinterInstallRoot 'start-fake-printer.bat'
 $script:IppPrinterEnvFile = Join-Path $script:IppPrinterInstallRoot '.env'
 
 function Get-DefaultSpoolDir {
@@ -114,25 +113,10 @@ function Remove-LegacyScheduledTasks {
     }
 }
 
-function Write-StartBat([string]$InstallRoot) {
+function Remove-LegacyStartBat([string]$InstallRoot) {
     $batPath = Join-Path $InstallRoot 'start-fake-printer.bat'
-    if ($InstallRoot -eq $script:IppPrinterRepoRoot) {
-        Write-Host "start bat: $batPath (committed; no rewrite needed)"
-        return
+    if (Test-Path -LiteralPath $batPath) {
+        Remove-Item -LiteralPath $batPath -Force
+        Write-Host "removed legacy launcher: $batPath"
     }
-    $lines = @(
-        '@echo off'
-        'title Fake Printer'
-        'cd /d "%~dp0"'
-        ''
-        'if not exist "%~dp0fake-printer.exe" ('
-        '  echo [ERROR] fake-printer.exe not found. Run: pwsh scripts\setup.ps1'
-        '  pause'
-        '  exit /b 1'
-        ')'
-        ''
-        '"%~dp0fake-printer.exe"'
-    )
-    Set-Content -LiteralPath $batPath -Value ($lines -join "`r`n") -Encoding ASCII
-    Write-Host "start bat: $batPath"
 }

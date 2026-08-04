@@ -83,6 +83,12 @@ fn main() -> std::io::Result<()> {
         return Ok(());
     };
 
+    // The exe is launched directly (no wrapper .bat), so name the window here.
+    let _ = ratatui::crossterm::execute!(
+        std::io::stdout(),
+        ratatui::crossterm::terminal::SetTitle(format!("fake-printer - {}", config.printer_name))
+    );
+
     // Fail fast if the embedded pdfium.dll cannot be extracted.
     match render::ensure_pdfium_dll() {
         Ok(path) => tracing::info!("pdfium ready: {}", path.display()),
