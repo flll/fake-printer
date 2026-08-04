@@ -12,6 +12,7 @@ mod mdns;
 mod postprocess;
 mod render;
 mod server;
+mod single_instance;
 mod tui;
 mod upload;
 
@@ -52,6 +53,22 @@ fn init_logging(config: &Config, headless: bool) -> tracing_appender::non_blocki
     guard
 }
 
+/// Another instance owns the port. Keep it running and give the user a few
+/// seconds to read why this window is closing (the launcher .bat exits with us).
+fn report_already_running(port: u16) {
+    use std::io::Write;
+
+    let msg = format!("fake-printer is already running on port {port} — leaving it untouched.");
+    tracing::warn!("{msg}");
+    println!("{msg}");
+    for remaining in (1..=5).rev() {
+        print!("\rClosing this window in {remaining}s... ");
+        let _ = std::io::stdout().flush();
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+    println!();
+}
+
 fn main() -> std::io::Result<()> {
     let headless = std::env::args().any(|a| a == "--headless");
     let config = Config::load();
@@ -60,6 +77,11 @@ fn main() -> std::io::Result<()> {
         eprintln!("[WARN] {warning}");
         tracing::warn!("{warning}");
     }
+
+    let Some(_instance_lock) = single_instance::acquire(config.listen_port) else {
+        report_already_running(config.listen_port);
+        return Ok(());
+    };
 
     // Fail fast if the embedded pdfium.dll cannot be extracted.
     match render::ensure_pdfium_dll() {
@@ -73,6 +95,20 @@ fn main() -> std::io::Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<UiEvent>();
 
+    // Bind before advertising: publishing mDNS from a process that then fails to
+    // listen leaves clients with a dead service record for this printer name.
+    let listener = match runtime.block_on(server::bind(&config)) {
+        Ok(listener) => listener,
+        Err(e) => {
+            eprintln!(
+                "[ERROR] cannot listen on {}:{}: {e}",
+                config.listen_host, config.listen_port
+            );
+            tracing::error!("bind failed: {e}");
+            return Err(e);
+        }
+    };
+
     let state = Arc::new(AppState {
         config: config.clone(),
         registry: JobRegistry::new(),
@@ -82,7 +118,7 @@ fn main() -> std::io::Result<()> {
     // IPP server.
     let server_state = Arc::clone(&state);
     runtime.spawn(async move {
-        if let Err(e) = server::run(server_state).await {
+        if let Err(e) = server::serve(listener, server_state).await {
             tracing::error!("server exited: {e}");
         }
     });
