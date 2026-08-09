@@ -46,10 +46,13 @@ else {
     Test-Line 'install.json' $false 'scripts/setup.ps1'
 }
 
-# Program-scoped allow rules (created when Windows prompts on first run)
-# satisfy the same need as the named port rules.
+# Program-scoped allow rules (created when Windows prompts on first run) satisfy
+# the same need as the named port rules. Match on the program path, since
+# Windows names those rules after the product, not the file.
 $fwProgram = @(
-    Get-NetFirewallRule -DisplayName 'fake-printer.exe' -ErrorAction SilentlyContinue |
+    Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue |
+        Where-Object { $_.Program -like '*\fake-printer.exe' } |
+        Get-NetFirewallRule -ErrorAction SilentlyContinue |
         Where-Object { $_.Enabled -eq $true -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Allow' }
 ).Count -gt 0
 
@@ -70,7 +73,7 @@ $fw5353 = $fwProgram -or $fwMdnsSystem -or (@(
 ).Count -gt 0)
 Test-Line 'firewall UDP 5353' $fw5353 'scripts/open-firewall.ps1 (admin)'
 
-Test-Line 'start-fake-printer.bat' (Test-Path -LiteralPath $script:IppPrinterStartBat) 'scripts/setup.ps1'
+Test-Line 'fake-printer.exe' (Test-Path -LiteralPath $script:IppPrinterExe) 'scripts/setup.ps1'
 
 $listen = @(Get-NetTCPConnection -LocalPort 8631 -State Listen -ErrorAction SilentlyContinue).Count -gt 0
 if ($listen) {
@@ -84,7 +87,7 @@ if ($listen) {
     }
 }
 else {
-    Write-Host 'INFO : server not running (start start-fake-printer.bat)'
+    Write-Host 'INFO : server not running (start fake-printer.exe)'
 }
 
 $legacyTask = $null -ne (Get-ScheduledTask -TaskName 'LenovoIppPrinter' -ErrorAction SilentlyContinue)

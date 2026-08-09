@@ -1,8 +1,8 @@
 fake-printer
 ============
 
-Helper scripts in this repository (scripts/, start-fake-printer.bat) are
-licensed under the MIT License. See LICENSE.
+Helper scripts in this repository (scripts/) are licensed under the MIT
+License. See LICENSE.
 
 Engine (rust/)
 --------------

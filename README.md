@@ -23,10 +23,11 @@ For AI coding agents, see [AGENTS.md](AGENTS.md). Security model: [SECURITY.md](
 git clone https://github.com/flll/fake-printer.git
 cd fake-printer
 pwsh scripts/setup.ps1     # cargo build --release + .env + dirs + firewall
-.\start-fake-printer.bat
+.\fake-printer.exe
 ```
 
-Closing the `start-fake-printer.bat` window stops everything (single process).
+Closing the console window stops everything (single process). Starting a second
+copy refuses to run rather than disturbing the one already serving.
 
 Already have a built `fake-printer.exe`? Just copy it to any folder and run it —
 `spool/`, `inbox/`, `logs/`, `temp/` are created next to the exe.
@@ -55,7 +56,7 @@ Raw log: `logs/server.log`.
 
 ```powershell
 pwsh scripts/doctor.ps1          # health check
-pwsh scripts/start.ps1           # launch bat in a new window
+pwsh scripts/start.ps1           # launch the exe in a new window
 pwsh scripts/stop.ps1            # stop stray processes
 pwsh scripts/setup.ps1 -Force    # rebuild exe + rewrite .env
 ```
@@ -82,7 +83,7 @@ pwsh scripts/setup.ps1 -InstallRoot 'D:\my-fake-printer'
 
 ```
 fake-printer/
-  start-fake-printer.bat   # launch (runs fake-printer.exe)
+  fake-printer.exe         # launch (built by scripts/setup.ps1)
   rust/                    # the engine — single-binary Rust crate
   scripts/                 # PowerShell setup/ops helpers
   config/env.example       # .env template (written to <install root>\.env)

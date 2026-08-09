@@ -311,11 +311,17 @@ async fn fallback(
     }
 }
 
-/// Bind and serve until the process exits.
-pub async fn run(state: Arc<AppState>) -> std::io::Result<()> {
-    let addr = format!("{}:{}", state.config.listen_host, state.config.listen_port);
+/// Claim the IPP port. Kept separate from [`serve`] so startup can fail before
+/// anything is advertised over mDNS.
+pub async fn bind(config: &Config) -> std::io::Result<tokio::net::TcpListener> {
+    let addr = format!("{}:{}", config.listen_host, config.listen_port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::info!("Listening on http://{addr}{}", state.config.ipp_path);
+    tracing::info!("Listening on http://{addr}{}", config.ipp_path);
+    Ok(listener)
+}
+
+/// Serve until the process exits.
+pub async fn serve(listener: tokio::net::TcpListener, state: Arc<AppState>) -> std::io::Result<()> {
     axum::serve(
         listener,
         router(state).into_make_service_with_connect_info::<SocketAddr>(),

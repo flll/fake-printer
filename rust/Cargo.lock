@@ -774,6 +774,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
+ "windows-sys",
 ]
 
 [[package]]

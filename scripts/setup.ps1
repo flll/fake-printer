@@ -17,7 +17,6 @@ if ($InstallRoot) {
     $script:IppPrinterExe = Join-Path $InstallRoot 'fake-printer.exe'
     $script:IppPrinterManifest = Join-Path $InstallRoot 'install.json'
     $script:IppPrinterLogsDir = Join-Path $InstallRoot 'logs'
-    $script:IppPrinterStartBat = Join-Path $InstallRoot 'start-fake-printer.bat'
     $script:IppPrinterEnvFile = Join-Path $InstallRoot '.env'
 }
 
@@ -88,10 +87,10 @@ Write-Host "spool: $spool"
 Remove-LegacyScheduledTasks
 
 $ippUrl = "ipp://$(Get-LocalIPv4):8631/ipp/print"
-Write-StartBat -InstallRoot $script:IppPrinterInstallRoot
+Remove-LegacyStartBat -InstallRoot $script:IppPrinterInstallRoot
 
 Write-InstallManifest @{
-    version      = 4
+    version      = 5
     deployed_at  = (Get-Date).ToString('o')
     install_root = $script:IppPrinterInstallRoot
     spool_dir    = $spool
@@ -100,16 +99,16 @@ Write-InstallManifest @{
     render_dpi   = $RenderDpi
     local_ipv4   = (Get-LocalIPv4)
     ipp_url      = $ippUrl
-    start_bat    = $script:IppPrinterStartBat
+    start_exe    = $script:IppPrinterExe
     inbox_dir    = $inboxDir
-    launch_mode  = 'bat-foreground'
+    launch_mode  = 'exe-foreground'
     engine       = 'rust'
 }
 
 Write-Host ''
 Write-Host 'Setup complete.'
-Write-Host "Start:   $($script:IppPrinterStartBat)"
+Write-Host "Start:   $($script:IppPrinterExe)"
 Write-Host "IPP URL: $ippUrl"
 Write-Host "Spool:   $spool"
 Write-Host "Inbox:   $inboxDir"
-Write-Host 'Next:    double-click start-fake-printer.bat (close window to stop)'
+Write-Host 'Next:    double-click fake-printer.exe (close window to stop)'

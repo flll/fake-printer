@@ -1,0 +1,173 @@
+diff --git a/server.py b/server.py
+index cd10a5e..b7b0ec4 100644
+--- a/server.py
++++ b/server.py
+@@ -413,7 +413,7 @@ def build_ipp_response_with_version(
+     return bytes(response)
+ 
+ 
+-def build_get_printer_attributes_response(host_header: str, ipp_path: str) -> bytes:
++def build_get_printer_attributes_response(host_header: str, ipp_path: str, busy: bool = False) -> bytes:
+     # Prefer an explicit port if provided in Host.
+     host = host_header or "127.0.0.1"
+     printer_uri = f"ipp://{host}{ipp_path}"
+@@ -448,9 +448,12 @@ def build_get_printer_attributes_response(host_header: str, ipp_path: str) -> by
+     attrs += _ipp_attr_str(VT_NATURAL_LANGUAGE, "natural-language-configured", "en")
+     attrs += _ipp_attr_str(VT_NATURAL_LANGUAGE, "generated-natural-language-supported", "en")
+     attrs += _ipp_attr_bool("printer-is-accepting-jobs", True)
+-    attrs += _ipp_attr_i32(VT_ENUM, "printer-state", 3)  # idle
++    # Android's built-in print service decides a job finished by watching the
++    # printer transition processing(4) -> idle(3) via Get-Printer-Attributes
++    # polling; a printer that always reports idle makes it wait ~46s per job.
++    attrs += _ipp_attr_i32(VT_ENUM, "printer-state", 4 if busy else 3)
+     attrs += _ipp_attr_str(VT_KEYWORD, "printer-state-reasons", "none")
+-    attrs += _ipp_attr_i32(VT_INTEGER, "queued-job-count", 0)
++    attrs += _ipp_attr_i32(VT_INTEGER, "queued-job-count", 1 if busy else 0)
+     attrs += _ipp_attr_str(VT_MIME_MEDIA_TYPE, "document-format-default", "application/pdf")
+     attrs += _ipp_attr_str_set(VT_MIME_MEDIA_TYPE, "document-format-supported", _supported_document_formats())
+     attrs += _ipp_attr_str(VT_KEYWORD, "compression-supported", "none")
+@@ -881,7 +884,11 @@ class IppHandler(BaseHTTPRequestHandler):
+         # macOS probes printers with Get-Printer-Attributes before it will add them.
+         if operation_id == IPP_OP_GET_PRINTER_ATTRIBUTES:
+             logger.debug("Handling Get-Printer-Attributes")
+-            attr_bytes = build_get_printer_attributes_response(self.headers.get("Host", ""), config["IPP_PATH"])
++            attr_bytes = build_get_printer_attributes_response(
++                self.headers.get("Host", ""),
++                config["IPP_PATH"],
++                busy=self.server.printer_is_busy(),  # type: ignore[attr-defined]
++            )
+             response = build_ipp_response_with_version(vmaj, vmin, IPP_STATUS_SUCCESSFUL_OK, request_id, attr_bytes)
+             self.send_response(200)
+             self.send_header("Content-Type", "application/ipp")
+@@ -1065,6 +1072,7 @@ class IppHandler(BaseHTTPRequestHandler):
+                 return
+ 
+             try:
++                self.server.job_activity_begin()  # type: ignore[attr-defined]
+                 total, pages = render_document_to_pngs(document, meta, dpi=config["IPP_RENDER_DPI"])
+                 for page_num, png_bytes in pages.items():
+                     (spool_dir / f"page_{page_num:04d}.png").write_bytes(png_bytes)
+@@ -1128,13 +1136,23 @@ class IppHandler(BaseHTTPRequestHandler):
+                 logger.exception("Render failed")
+                 self.send_error(500, f"Render failed: {e}")
+                 return
++            finally:
++                self.server.job_activity_end(config["IPP_BUSY_GRACE_SECONDS"])  # type: ignore[attr-defined]
+ 
++            # Include job attributes (job-id/job-uri/job-state) so clients can
++            # confirm acceptance; falls back to operation attributes only when
++            # the job-id is unknown.
+             response = build_ipp_response_with_version(
+                 vmaj,
+                 vmin,
+                 IPP_STATUS_SUCCESSFUL_OK,
+                 request_id,
+-                build_operation_attributes(),
++                build_get_job_attributes_response(
++                    self.headers.get("Host", ""),
++                    config["IPP_PATH"],
++                    job_id_int,
++                    self.server.get_job_state(job_id_int, default=9),  # type: ignore[attr-defined]
++                ),
+             )
+             self.send_response(200)
+             self.send_header("Content-Type", "application/ipp")
+@@ -1167,17 +1185,20 @@ class IppHandler(BaseHTTPRequestHandler):
+ 
+         # Everything below is for Print-Job.
+         job_id = uuid.uuid4().hex
++        job_id_int = self.server.allocate_job_id()  # type: ignore[attr-defined]
+         now = _utc_timestamp_compact()
+         spool_dir = Path(config["IPP_SPOOL_DIR"]).resolve() / f"{now}_{job_id}"
+         spool_dir.mkdir(parents=True, exist_ok=True)
+ 
+-        logger.info("Spooling job %s to %s", job_id, spool_dir)
++        logger.info("Spooling job %s (job-id=%s) to %s", job_id, job_id_int, spool_dir)
+ 
+         (spool_dir / "request.ipp").write_bytes(raw)
+         (spool_dir / "meta.json").write_text(json.dumps(meta, indent=2, sort_keys=True), encoding="utf-8")
+         (spool_dir / "document.bin").write_bytes(document)
++        self.server.register_job(job_id_int, spool_dir)  # type: ignore[attr-defined]
+ 
+         if not document:
++            self.server.set_job_state(job_id_int, 8)  # type: ignore[attr-defined]
+             logger.warning(
+                 "Rejecting Print-Job with empty payload: request_id=%s content_length_header=%s transfer_encoding=%s",
+                 request_id,
+@@ -1202,6 +1223,7 @@ class IppHandler(BaseHTTPRequestHandler):
+             return
+ 
+         try:
++            self.server.job_activity_begin()  # type: ignore[attr-defined]
+             total, pages = render_document_to_pngs(document, meta, dpi=config["IPP_RENDER_DPI"])
+             for page_num, png_bytes in pages.items():
+                 (spool_dir / f"page_{page_num:04d}.png").write_bytes(png_bytes)
+@@ -1250,17 +1272,30 @@ class IppHandler(BaseHTTPRequestHandler):
+                 logger.info("Upload disabled (POST_ENDPOINT empty); skipping POST")
+ 
+         except ValueError as e:
++            self.server.set_job_state(job_id_int, 8)  # type: ignore[attr-defined]
+             logger.warning("%s", e)
+             self.send_error(415, str(e))
+             return
+         except Exception as e:
++            self.server.set_job_state(job_id_int, 8)  # type: ignore[attr-defined]
+             logger.exception("Render/POST failed")
+             self.send_error(500, f"Render/POST failed: {e}")
+             return
+-
+-        # Minimal IPP success response
+-        # version 1.1, status successful-ok (0x0000), same request-id
+-        response = build_ipp_response_with_version(vmaj, vmin, IPP_STATUS_SUCCESSFUL_OK, request_id, b"")
++        finally:
++            self.server.job_activity_end(config["IPP_BUSY_GRACE_SECONDS"])  # type: ignore[attr-defined]
++
++        # IPP success response. RFC 8011 requires operation attributes
++        # (attributes-charset / attributes-natural-language) in every response and
++        # job-id / job-uri / job-state in a Print-Job response; without job-id,
++        # Android (Mopria) cannot confirm the job was accepted and keeps resending it.
++        self.server.set_job_state(job_id_int, 9)  # type: ignore[attr-defined]
++        attr_bytes = build_get_job_attributes_response(
++            self.headers.get("Host", ""),
++            config["IPP_PATH"],
++            job_id_int,
++            9,  # completed: the document is already rendered at this point
++        )
++        response = build_ipp_response_with_version(vmaj, vmin, IPP_STATUS_SUCCESSFUL_OK, request_id, attr_bytes)
+ 
+         self.send_response(200)
+         self.send_header("Content-Type", "application/ipp")
+@@ -1286,6 +1321,25 @@ class IppServer(ThreadingHTTPServer):
+         self._job_states: Dict[int, int] = {}
+         self._job_overrides: Dict[int, Dict[str, str]] = {}
+         self._client_overrides: Dict[str, Dict[str, str]] = {}
++        self._busy_depth = 0
++        self._busy_grace_until = 0.0
++
++    def job_activity_begin(self) -> None:
++        with self._job_lock:
++            self._busy_depth += 1
++
++    def job_activity_end(self, grace_seconds: int) -> None:
++        # Keep reporting "processing" for a short grace window after the job so
++        # ~1s status pollers reliably observe the processing -> idle transition.
++        with self._job_lock:
++            self._busy_depth = max(0, self._busy_depth - 1)
++            self._busy_grace_until = max(
++                self._busy_grace_until, time.monotonic() + max(0, grace_seconds)
++            )
++
++    def printer_is_busy(self) -> bool:
++        with self._job_lock:
++            return self._busy_depth > 0 or time.monotonic() < self._busy_grace_until
+ 
+     def allocate_job_id(self) -> int:
+         with self._job_lock:
+@@ -1373,6 +1427,7 @@ def main() -> None:
+         "IPP_MAX_BYTES": _env_int("IPP_MAX_BYTES", 100 * 1024 * 1024),
+         "IPP_SPOOL_DIR": _env_str("IPP_SPOOL_DIR", "./spool"),
+         "IPP_RENDER_DPI": _env_int("IPP_RENDER_DPI", 150),
++        "IPP_BUSY_GRACE_SECONDS": _env_int("IPP_BUSY_GRACE_SECONDS", 4),
+         "IPP_TEMP_DIR": _env_str("IPP_TEMP_DIR", "./temp"),
+         "IPP_SEND_EXPECT_CONTINUE": _env_bool("IPP_SEND_EXPECT_CONTINUE", False),
+         "IPP_SHARED_TOKEN": os.getenv("IPP_SHARED_TOKEN") or "",
